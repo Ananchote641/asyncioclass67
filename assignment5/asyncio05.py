@@ -41,7 +41,7 @@ async def main():
     print("Waitting")
     for task in pending:
         
-       # dish, time_taken = task.result()
+       # dish, time_taken = task.result()\
         re = await task
         # print(f'-{dish} is completed in {time_taken:.10f}')
         # print(f'{dish} : Finished cooking')
