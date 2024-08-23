@@ -1,35 +1,19 @@
-from pypokemon.pokemon import Pokemon
+import aiohttp
 import asyncio
-import httpx
-import time
-import random
 
+async def get_pokemon_with_ability(session, ability_url):
+    async with session.get(ability_url) as resp:
+        data = await resp.json()
+        # ดึง Pokémon ที่มีความสามารถ "battle-armor"
+        pokemon_list = data['pokemon']
+        return [pokemon['pokemon']['name'] for pokemon in pokemon_list]
 
-async def get_pokemon(client, url):
-    print(f"{time.ctime()} - get {url}")
-    resp = await client.get(url)
-    pokemon = resp.json()
-    return pokemon
+async def main():
+    url = 'https://pokeapi.co/api/v2/ability/battle-armor'
+    
+    async with aiohttp.ClientSession() as session:
+        pokemon_names = await get_pokemon_with_ability(session, url)
+        # พิมพ์ชื่อ Pokémon ในบรรทัดเดียวกัน
+        print("Pokémon with ability 'battle-armor':", ', '.join(pokemon_names))
 
-async def get_pokemons():
-    async with httpx.AsyncClient() as client:
-        tasks = []
-        rand_list = []
-        for i in range(5):
-            rand_list.append(random.randint(1, 151))
-
-        for number in rand_list:
-            url = f'https://pokeapi.co/api/v2/pokemon/{number}/'
-            tasks.append(asyncio.create_task(get_pokemon(client, url)))
-
-        pokemons = await asyncio.gather(*tasks)
-        return pokemons
-
-async def index():
-    start_time = time.perf_counter()
-    pokemons = await get_pokemons()
-    end_time = time.perf_counter()
-    print(f"{time.ctime()} - Asynchronous get {len(pokemons)} pokemons. Time taken: {end_time-start_time} seconds")
-
-if __name__ == '__main__':
-    asyncio.run(index())
+asyncio.run(main())
