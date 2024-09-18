@@ -1,82 +1,123 @@
 import time
 import asyncio
 from asyncio import Queue
+from random import randrange
 
-# Define Product and Customer classes
 class Product:
     def __init__(self, product_name: str, checkout_time: float):
         self.product_name = product_name
         self.checkout_time = checkout_time
+
 
 class Customer:
     def __init__(self, customer_id: int, products: list[Product]):
         self.customer_id = customer_id
         self.products = products
 
-# Consumer method to process customers in queue
-async def checkout_customer(queue: Queue, cashier_number: int, cashier_stats: dict, checkout_times: list[float]):
-    customers_served = 0  # Track number of customers served by each cashier
-    cashier_start_time = time.perf_counter()
-    
+async def checkout_customer(queue: Queue, cashier_number: int):
+    final_time = []
+    final_q = []
     while not queue.empty():
-        customer = await queue.get()
+        customer: Customer = await queue.get()
         customer_start_time = time.perf_counter()
-        print(f"Cashier_{cashier_number} will checkout Customer_{customer.customer_id}")
+        print(f"the Cashier {cashier_number} :"
+                f"will checkout Customer_{customer.customer_id}")
         
-        # Use the specific checkout time for this cashier
         for product in customer.products:
-            await asyncio.sleep(checkout_times[cashier_number])  # Simulate checkout time
+
+            if cashier_number == 2:
+                product.checkout_time = 0.1
+                print("time", product.checkout_time)
+                print(f"the Cashier {cashier_number} :"
+                    f"will checkout Customer_{customer.customer_id} "
+                    f"Product_{product.product_name} "
+                    f"in {product.checkout_time}")
+                totol_time1 = round(product.checkout_time, ndigits=2)
+                final_time.append(totol_time1)
+                
+                await asyncio.sleep(product.checkout_time)
+
+            else:
+                print(f"the Cashier {cashier_number} :"
+                    f"will checkout Customer_{customer.customer_id} "
+                    f"Product_{product.product_name} "
+                    f"in {product.checkout_time + (0.1*cashier_number)} ")
+                totol_time1 = round(product.checkout_time + (0.1*cashier_number), ndigits=2)
+                final_time.append(totol_time1)
+                
+                await asyncio.sleep(product.checkout_time + (0.1*cashier_number) )
+
+        print(f"the Cashier_{cashier_number}"
+                f"finished checkout Customer_{customer.customer_id}"
+                f"in {round(time.perf_counter() - customer_start_time, ndigits=2)} secs")
         
-        print(f"Cashier_{cashier_number} finished checkout Customer_{customer.customer_id} in {round(time.perf_counter() - customer_start_time, 2)} seconds")
-        customers_served += 1
+        totol_time2 = round(time.perf_counter() - customer_start_time, ndigits=2)
+        # final_time.append(totol_time)
+        final_q.append(totol_time2)
+        print(f"totel time of the Cashier_{cashier_number}")
+        print(totol_time1)
+        
         queue.task_done()
-    
-    total_time = round(time.perf_counter() - cashier_start_time, 2)
-    cashier_stats[cashier_number] = (customers_served, total_time)  # Save stats for each cashier
 
-# Generate a customer with predefined checkout time for products
+    return sum(final_time), len(final_q)
+
+
 def generate_customer(customer_id: int) -> Customer:
-    # Since the checkout time is now defined per cashier, we can set a dummy time here
-    products = [Product('product', 0)]  # Dummy time
-    return Customer(customer_id, products)
+    all_products = [Product('beef', 1),
+                    Product('banana', .4),
+                    Product('sausage', .4),
+                    Product('diapers', .2)]
+    return Customer(customer_id, all_products)
 
-# Producer method to generate customers and put them in the queue
+
 async def customer_generation(queue: Queue, customers: int):
-    for customer_id in range(customers):
-        customer = generate_customer(customer_id)
-        print(f"Putting Customer_{customer_id} in line...")
-        await queue.put(customer)
-    return customers
+    customer_count = 0
+    while True:
+        customers = [generate_customer(the_id)
+                     for the_id in range(customer_count, customer_count+customers)]
+
+        for customer in customers:
+            print("Waiting to put customer in line....")
+            await queue.put(customer)
+            print("Customer pput in line....")
+
+
+        customer_count = customer_count + len(customers)
+        await asyncio.sleep(.001)
+        return customer_count
 
 async def main():
-    customers = 10
-    queue_size = 3
-    cashiers = 5
- 
+    totol_time = []
+    q = []
+    customer_queue = Queue(10)
+    cashier_time = time.perf_counter()
+    customer_producer = asyncio.create_task(customer_generation(customer_queue, 10))
+    cashiers = [checkout_customer(customer_queue, i) for i in range(5)]
+    
 
-    customer_queue = Queue(queue_size)
-    cashier_stats = {}  
+    result = await asyncio.gather(customer_producer, *cashiers)
 
-    start_time = time.perf_counter()
-
-    checkout_times = [2.0, 2.4, 0.4, 3.2, 3.6] 
-
-    # Create the producer task
-    customer_producer = asyncio.create_task(customer_generation(customer_queue, customers))
-
-    # Create the consumer tasks for cashiers
-    cashier_tasks = [checkout_customer(customer_queue, i, cashier_stats, checkout_times) for i in range(cashiers)]
-
-    # Run all tasks concurrently
-    await asyncio.gather(customer_producer, *cashier_tasks)
-
-    # Sort and print statistics for each cashier by cashier number
-    sorted_stats = sorted(cashier_stats.items())  # Sort by cashier number
-    for cashier_number, (customers_served, total_time) in sorted_stats:
-        print(f"The Cashier_{cashier_number} took {customers_served} customers total {total_time:.2f} seconds")
-
-    # Print total time taken for all customers
-    print(f"Total Time for {customers} customers with {cashiers} cashiers: {round(time.perf_counter() - start_time, 2)} seconds")
-
+    # for i in result:
+    totol_time.append(result[0])
+    q.append(result)
+    
+    #print(totol_time)
+    print("Time",q)
+    print(f"The supermarket process finished"
+           f"{customer_producer.result()} customers"
+           f"in {round(time.perf_counter() - cashier_time, ndigits=2)} secs")
+    
+    
+    
 if __name__ == "__main__":
     asyncio.run(main())
+    
+# +--------|------------|-------------|-----------------------|-------------------------    
+# Queue	   | Customer   | Cashier	  |  Time each Customer	  |  Time for all Customers
+# 2	       | 2	        | 2		      |                       |           
+# 2	       | 3	        | 2		      |                       |                                               		
+# 2	       | 4	        | 2		      |                       |           
+# 2	       | 10	        | 3		      |                       |           
+# 5	       | 10	        | 4			  |                       |               
+# 5	       | 20			|             |                       |  >= 8 s
+# +--------|------------|-------------|-----------------------|-------------------------  

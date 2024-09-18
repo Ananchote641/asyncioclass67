@@ -43,11 +43,14 @@ async def checkout_customer(queue: Queue, cashier_number: int):
         print(f'The Cashier_{cashier_number} finished checkout Customer_{customer.customer_id} '
               f'in {round(time.perf_counter() - customer_start_time, ndigits=2)} secs')
 
-        queue.task_done()
 
     # Print the total number of customers processed and total time taken by this cashier
-    print(f"Cashier_{cashier_number} processed {customers_processed} customers.")
-    print(f"Cashier_{cashier_number} total checkout time: {round(total_checkout_time, 2)} secs.")
+        print(f"Cashier_{cashier_number} processed {customers_processed} customers.")
+        print(f"Cashier_{cashier_number} total checkout time: {round(total_checkout_time, 2)} secs.")
+
+        queue.task_done()
+
+    
 
 
 def generate_customer(customer_id: int) -> Customer:
