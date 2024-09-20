@@ -86,6 +86,7 @@ async def customer_generation(queue: Queue, customers: int):
         await asyncio.sleep(.001)
         return customer_count
 
+
 async def main():
     totol_time = []
     q = []
